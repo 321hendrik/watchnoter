@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources>
+	<string name="enterKey">Enter key...</string>
+	<string name="setKey">Activate</string>
+	<string name="enterTitle">Enter a title...</string>
+	<string name="enterText">Enter your text...</string>
+	<string name="cancel">Cancel</string>
+	<string name="save">Save</string>
+	<string name="delete">Delete</string>
+	<string name="newEntry">Create new entry...</string>
+	<string name="unlocked">unlocked</string>
+</resources>
