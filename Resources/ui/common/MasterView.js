@@ -1,301 +1,229 @@
 //FirstView Component Constructor
 function FirstView(parent) {
-	var DetailWindow = require('/ui/handheld/DetailWindow');
-	var key = '';
-	var detailLaunch = false;
 
-	var windowOpenAnimation;
-	if (Ti.App.isAndroid) {
-		windowOpenAnimation = {
-			animated: false
-		};
-	} else {
-		windowOpenAnimation = {
-			transition: Titanium.UI.iPhone.AnimationStyle.FLIP_FROM_RIGHT//NONE//CURL_DOWN//FLIP_FROM_RIGHT
-		};
+	var overallWidth = '90%';
+	var overallBackground = '#a11d4c';
+
+	function getDict () {
+		if (Ti.App.Properties.hasProperty('watchnoter:dict')) {
+			return Ti.App.Properties.getObject('watchnoter:dict');
+		} else {
+			return {};
+		}
 	}
-	
-	//create app directory
-	var appDir = Ti.Filesystem.getFile(Ti.Filesystem.getApplicationDataDirectory(), 'entries');
-	if ( !appDir.exists() ) {
-		appDir.createDirectory();
+
+	function setDict (dict) {
+		Ti.App.Properties.setObject('watchnoter:dict', dict);
 	}
-	
+
+	function updateEntry (key, data) {
+		var dict = getDict();
+		dict[key] = JSON.stringify(data);
+		setDict(dict);
+	}
+
+	function getEntry (key) {
+		var dict = getDict();
+		return JSON.parse(dict[key]);
+	}
+
+	function removeEntry (key) {
+		var dictOld = getDict();
+		var dictNew = {};
+		for (var k in dictOld) {
+			if (k != key) {
+				dictNew[k] = dictOld[k];
+			}
+		}
+		setDict(dictNew);
+	}
+
+	function createCountBox (data) {
+		var box = Ti.UI.createView({
+			count: data.count,
+			height: Ti.UI.FILL,
+			width: '50%',
+			layout: 'horizontal'
+		});
+		box.count = data.count;
+
+		box.setCount = function (count) {
+			if (count < 1) {
+				return;
+			}
+			box.count = count;
+			title.setText(data.title + ' ' + count);
+			box.fireEvent('countchanged', {count: count});
+		};
+
+		box.getCount = function () {
+			return box.count;
+		};
+
+		var up = Ti.UI.createLabel({
+			text: '+',
+			width: '33%',
+			height: '100%',
+			color: overallBackground,
+			verticalAlign: Titanium.UI.TEXT_VERTICAL_ALIGNMENT_CENTER,
+			textAlign: Titanium.UI.TEXT_ALIGNMENT_CENTER,
+			font: {
+				fontSize: '18sp'
+			}
+		});
+		up.addEventListener('singletap', function () {
+			box.setCount(box.getCount() + 1);
+		});
+		box.add(up);
+
+		var title = Ti.UI.createLabel({
+			verticalAlign: Titanium.UI.TEXT_VERTICAL_ALIGNMENT_CENTER,
+			textAlign: Titanium.UI.TEXT_ALIGNMENT_CENTER,
+			text: '',
+			color: '#fff',
+			height: '100%',
+			width: '33%'
+		});
+		box.add(title);
+
+		var down = Ti.UI.createLabel({
+			text: '-',
+			width: '33%',
+			height: '100%',
+			color: overallBackground,
+			verticalAlign: Titanium.UI.TEXT_VERTICAL_ALIGNMENT_CENTER,
+			textAlign: Titanium.UI.TEXT_ALIGNMENT_CENTER,
+			font: {
+				fontSize: '18sp'
+			}
+		});
+		down.addEventListener('singletap', function () {
+			box.setCount(box.getCount() - 1);
+		});
+		box.add(down);
+
+		box.setCount(data.count);
+
+		return box;
+	}
+
+	function createEntryView (data) {
+		var entry = Ti.UI.createView({
+			title: data.title,
+			season: data.season,
+			episode: data.episode,
+			width: overallWidth,
+			height: 60,
+			layout: 'vertical',
+			backgroundColor: '#6fff',
+			bottom: 10
+		});
+
+		var title = Ti.UI.createLabel({
+			verticalAlign: Titanium.UI.TEXT_VERTICAL_ALIGNMENT_CENTER,
+			text: data.title,
+			color: '#8fff',
+			touchEnabled: false,
+			backgroundColor: overallBackground,
+			height: '50%',
+			ellipsize: true,
+			font: {
+				fontSize: '22sp'
+			},
+			width: Ti.UI.FILL
+		});
+		entry.add(title);
+
+		var bottomBox = Ti.UI.createView({
+			height: '50%',
+			width: Ti.UI.FILL,
+			layout: 'horizontal'
+		});
+		entry.add(bottomBox);
+		bottomBox.addEventListener('singletap', function () {
+			updateEntry(entry.title, {title: entry.title, season: seasonBox.getCount(), episode: episodeBox.getCount()});
+		});
+		var seasonBox = createCountBox({
+			title: 'S',
+			count: data.season
+		});
+		seasonBox.addEventListener('countchanged', function () {
+			episodeBox.setCount(1);
+		});
+		bottomBox.add(seasonBox);
+
+		var episodeBox = createCountBox({
+			title: 'E',
+			count: data.episode
+		});
+		bottomBox.add(episodeBox);
+
+		entry.addEventListener('longpress', function (e) {
+			removeEntry(e.source.title);
+			scroller.remove(entry);
+		});
+
+		return entry;
+	}
+
+	function createInputView (argument) {
+		var view = Ti.UI.createTextField({
+			width: overallWidth,
+			height: 30,
+			textAlign: Titanium.UI.TEXT_ALIGNMENT_CENTER,
+			backgroundColor: '#6fff',
+			hintText: 'Add new series',
+			bottom: 10
+		});
+		view.addEventListener('return', function (e) {
+			var data = {title: e.source.value, season: 1, episode: 1};
+			updateEntry(e.source.value, data);
+			scroller.add(createEntryView(data));
+			e.source.value = '';
+		});
+		return view;
+	}
+
+	/**
+	 * Draw View
+	 */
 	var self = Ti.UI.createView({
-		top: (Ti.App.iOS7) ? 20 : 0,
 		height: Ti.UI.FILL,
 		layout: 'vertical',
-		background: '#dedede'
+		backgroundColor: overallBackground
 	});
-	
-	// HEADER
-	var headerContainer = Ti.UI.createView({
-		top: 0,
-		height: Ti.UI.SIZE,
-		width: Ti.UI.FILL,
-		backgroundColor: '#fff'
-	});
-	self.add(headerContainer);
-	var labelHeadLine = Ti.UI.createLabel({
-		top: 5,
-		color:'#999',
-		text: 'NoteCryption',
-		font: {fontSize:'30sp', fontWeight:'bold'},
-		center: {x: '50%'},
-		height: 40,
-		width: Ti.UI.SIZE
-	});
-	headerContainer.add(labelHeadLine);
-	
-	var lockerIcon = Ti.UI.createView({
-		width: 30,
+
+	var spacer = Ti.UI.createView({
 		height: 30,
-		right: 10,
-		bottom: -50,
-		opacity: 0.0,
-		active: false
+		width: Ti.UI.FILL
 	});
-	lockerIcon.addEventListener('click', function () {
-		if (lockerIcon.active){
-			key = '';
-			lockerIcon.animate({bottom: -50, opacity: 0.0, duration: 300});
-			lockerIcon.active = false;
-			if (Ti.App.isAndroid) {
-				tableView.animate({top: 90, duration: 200});
-				keybox.animate({opacity: 1.0, height: 40, duration: 200});
-			} else {
-				keybox.animate({opacity: 1.0, height: 40, duration: 200});
-			}
+	self.add(spacer);
+
+	var title = Ti.UI.createLabel({
+		text: 'watchnoter',
+		color: '#8000',
+		bottom: 10,
+		font: {
+			fontSize: '26sp'
 		}
 	});
-	headerContainer.add(lockerIcon);
-	var lockerBar = Ti.UI.createView({
-		top: 0,
-		width: 26,
-		height: 26,
-		borderRadius: (Ti.App.isAndroid) ? 26 : 13,
-		backgroundColor: '#dedede'
-	});
-	lockerIcon.add(lockerBar);
-	var lockerHole = Ti.UI.createView({
-		top: 6,
-		width: 20,
-		height: 20,
-		borderRadius: (Ti.App.isAndroid) ? 20 : 10,
-		backgroundColor: '#ffffff'
-	});
-	lockerIcon.add(lockerHole);
-	var lockerBody = Ti.UI.createView({
-		bottom: 0,
-		width: 30,
-		height: 17,
-		borderRadius: (Ti.App.isAndroid) ? 10 : 5,
-		backgroundColor: '#dedede'
-	});
-	lockerIcon.add(lockerBody);
-	var lockerKeyHole = Ti.UI.createView({
-		bottom: 5,
-		width: 8,
-		height: 8,
-		borderRadius: (Ti.App.isAndroid) ? 8 : 4,
-		backgroundColor: '#ffffff'
-	});
-	lockerIcon.add(lockerKeyHole);
-	
-	// KEY-BOX
-	var keybox = Ti.UI.createView({
-		top: 0,
-		width: Ti.UI.FILL,
-		height: 40,
-		backgroundColor: '#88829FB8'
-	});
-	self.add(keybox);
-	
-	var keyField = Ti.UI.createTextField({
-		passwordMask: true,
-		left: 5,
-		right: 85,
+	self.add(title);
+
+	self.add(createInputView());
+
+	var scroller = Ti.UI.createScrollView({
 		width: Ti.UI.FILL,
 		height: Ti.UI.FILL,
-		color: '#fff',
-		keyboardType: Ti.UI.KEYBOARD_DEFAULT,
-		returnKeyType: Ti.UI.RETURNKEY_DEFAULT,
-		textAlign: 'center',
-		hintText: L('enterKey'),
-		autocapitalization: false,
-		autocorrect: false,
-		clearOnEdit: true,
-		value: '',
-		font: {fontSize: '16sp'}
+		layout: 'vertical'
 	});
-	keyField.addEventListener('return', function () {
-		btnSet.fireEvent('click');
-	});
-	keybox.add(keyField);
-	
-	var btnSet = Ti.UI.createView({
-		width: Ti.UI.SIZE,
-		right: 5,
-		height: Ti.UI.FILL,
-		backgroundColor: 'transparent'
-	});
-	var btnLbl = Ti.UI.createLabel({
-		center: {x:'50%',y:'50%'},
-		text: L('setKey'),
-		font: {fontSize: '14sp'},
-		color: '#ffffff',
-		touchEnabled: false
-	});
-	btnSet.add(btnLbl);
-	btnSet.addEventListener('click', function () {
-		key = keyField.value.toString();
-		if (key.length) {
-			if (Ti.App.isAndroid) {
-				keyField.value = '';
-				keyField.blur();
-				tableView.animate({top: 50, bottom: 0, duration: 300});
-				keybox.animate({height: 1, opacity: 0.0, duration: 300, backgroundColor: '#88829FB8'});
-			} else {
-				keybox.animate({opacity: 0.0, duration: 300}, function () {
-				keybox.animate({height: 1, duration: 300, backgroundColor: '#88829FB8'}, function () {
-						keyField.value = '';
-						keyField.blur();
-					});
-				});
-			}
-			lockerIcon.active = true;
-			lockerIcon.animate({bottom: 5, opacity: 1.0, duration: 300});
-		} else {
-			Ti.App.colorNotify(keybox, '#88D44E4E');
-		}
-	});
-	keybox.add(btnSet);
-	
-	// CONTENT
-	var tableView = Ti.UI.createTableView({
-		top: 5,
-		width: Ti.UI.FILL,
-		height: Ti.UI.FILL,
-		backgroundColor: '#dedede',
-		bottom: 0,
-		separatorStyle: (Ti.Platform.osname != 'android') ? Ti.UI.iPhone.TableViewSeparatorStyle.SINGLE_LINE : '',
-		separatorColor: 'transparent',
-		zIndex: 2
-	});
-	tableView.addEventListener('click', function(e) {
-		if ( key.length ) {
-			//var rowText = Ti.App.Blowfish.encrypt( e.row.value.text, key );
-			var rowTitle = ( e.row.title == ' ' + L('newEntry') ) ? '' : e.row.title;
+	self.add(scroller);
 
-			var detailWindow = new DetailWindow({
-				title: rowTitle.slice(1),
-				text: e.row.value.text,
-				key: key,
-				filePath: e.row.value.filePath,
-				update: updateTableView
-			});
-
-			if (Ti.App.isAndroid) {
-				detailLaunch = true;
-				detailWindow.addEventListener('close', function() {
-					detailLaunch = false;
-				});
-			}
-
-			detailWindow.open(windowOpenAnimation);
-		} else {
-			Ti.App.colorNotify(keybox, '#88D44E4E');
-			// '#88D44E4E' <-red '#88829FB8' <-blue
-		}
-	});
-	self.add(tableView);
-
-	if (Ti.App.isAndroid) {
-		var lblUnlocked = Ti.UI.createLabel({
-			top: -30,
-			center: {x:'50%'},
-			text: L('unlocked'),
-			font: {fontSize: '14sp'},
-			color: '#ffffff',
-			zIndex: 999
-		});
-		self.add(lblUnlocked);
+	var dict = getDict();
+	for (var key in dict) {
+		var data = getEntry(key);
+		scroller.add(createEntryView(data));
 	}
-	
-	function updateTableView(callback) {
-		// load files and parse entries
-		var appDirFiles = appDir.getDirectoryListing();
-		var entries = [];
-		for (i = appDirFiles.length; i--;) {
-			var file = Ti.Filesystem.getFile(Ti.Filesystem.getApplicationDataDirectory(), 'entries', appDirFiles[i]);
-			if ( file.exists() ) {
-				var entry = JSON.parse(file.read());
-				entries.push({title: entry.title, text: entry.text, filePath: file.getNativePath()});
-			}
-		}
-		
-		var tableData = [];
-		
-		// generate tableView rows
-		var newEntryRow = Ti.UI.createTableViewRow({
-			backgroundColor: '#3AC23F',
-			title: ' ' + L('newEntry'),
-			font: {fontSize: '18sp'},
-			color: '#000000',
-			value: {title: '', text: '', filePath: null},
-			height: 40,
-			backgroundSelectedColor: '#829FB8',
-			selectedColor: '#829FB8',
-		});
-		tableData.push(newEntryRow);
-		
-		for (var i = 0; i < entries.length; i++) {
-			Ti.API.log(entries[i].filePath);
-			var row = Ti.UI.createTableViewRow({
-				backgroundColor: (i % 2) ? '#99ffffff' : '#44ffffff',
-				title: ' ' + entries[i].title,
-				font: {fontSize: '18sp'},
-				color: '#000000',
-				value: entries[i],
-				height: 40,
-				backgroundSelectedColor: '#829FB8',
-				selectedColor: '#829FB8'
-			});
-			tableData.push(row);
-		}
-		
-		// update tableView
-		tableView.setData(tableData);
 
-		callback();
-	}
-	updateTableView(function () {});
-
-	// Reset key when app is paused
-	if (Ti.App.isAndroid) {
-		parent.addEventListener('open', function () {
-			var activity = parent.getActivity();
-			activity.addEventListener('pause', function() {
-				if (!detailLaunch) {
-					lockerIcon.fireEvent('click');
-					Ti.API.info("paused and left");
-				} else {
-					Ti.API.info("paused");
-				}
-			});
-		});
-	} else {
-		Ti.App.addEventListener('pause', function(e) {
-			lockerIcon.fireEvent('click');
-		});
-	}
-	
-	if (!Ti.App.isAndroid) {
-		setTimeout(function () {
-			keyField.focus();
-		}, 250);
-	}
-	
 	return self;
 }
 

@@ -15,19 +15,6 @@
 		return false;
 	}
 
-	Ti.App.colorNotify = function colorNotify (viewObj, highlightColor) {
-		var baseColor = viewObj.backgroundColor;
-		viewObj.animate({
-			backgroundColor: baseColor,
-			duration: 200
-		}, function () {
-			viewObj.animate({
-				backgroundColor: highlightColor,
-				duration: 200
-			});
-		});
-	};
-
 	Ti.App.iOS7 = isiOS7Plus();
 	Ti.App.isAndroid = Ti.Platform.getOsname() == 'android';
 
