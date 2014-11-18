@@ -29,6 +29,6 @@
 	var isTablet = osname === 'ipad' || (osname === 'android' && (width > 899 || height > 899));
 
 	var Window;
-	Window = require('ui/' + ((isTablet) ? 'tablet' : 'handheld') + '/ApplicationWindow');
+	Window = require('ui/window/ApplicationWindow');
 	new Window().open();
 })();

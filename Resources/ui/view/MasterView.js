@@ -119,20 +119,42 @@ function FirstView(parent) {
 			bottom: 10
 		});
 
+		var topBox = Ti.UI.createView({
+			backgroundColor: overallBackground,
+			height: '50%',
+			width: Ti.UI.FILL,
+			layout: 'horizontal'
+		});
+		entry.add(topBox);
+
 		var title = Ti.UI.createLabel({
 			verticalAlign: Titanium.UI.TEXT_VERTICAL_ALIGNMENT_CENTER,
 			text: data.title,
 			color: '#8fff',
 			touchEnabled: false,
-			backgroundColor: overallBackground,
-			height: '50%',
+			height: Ti.UI.FILL,
 			ellipsize: true,
 			font: {
 				fontSize: '22sp'
 			},
-			width: Ti.UI.FILL
+			width: '95%'
 		});
-		entry.add(title);
+		topBox.add(title);
+
+		var remove = Ti.UI.createLabel({
+			text: 'X',
+			color: '#4000',
+			font: {
+				fontSize: '18sp'
+			},
+			height: Ti.UI.FILL,
+			width: '5%',
+		});
+		topBox.add(remove);
+		remove.addEventListener('singletap', function (e) {
+			removeEntry(entry.title);
+			scroller.remove(entry);
+		});
 
 		var bottomBox = Ti.UI.createView({
 			height: '50%',
@@ -158,24 +180,32 @@ function FirstView(parent) {
 		});
 		bottomBox.add(episodeBox);
 
-		entry.addEventListener('longpress', function (e) {
-			removeEntry(e.source.title);
-			scroller.remove(entry);
-		});
-
 		return entry;
 	}
 
 	function createInputView (argument) {
 		var view = Ti.UI.createTextField({
 			width: overallWidth,
-			height: 30,
+			height: (Ti.Platform.osname == 'android') ? 35 : 30,
 			textAlign: Titanium.UI.TEXT_ALIGNMENT_CENTER,
 			backgroundColor: '#6fff',
 			hintText: 'Add new series',
 			bottom: 10
 		});
+
+		if (Ti.Platform.osname == 'android') {
+			function blockFocus (e) {
+				e.source.blur();
+				view.removeEventListener('focus', blockFocus);
+			}
+
+			view.addEventListener('focus', blockFocus);
+		}
+
 		view.addEventListener('return', function (e) {
+			if (e.source.value === '') {
+				return;
+			}
 			var data = {title: e.source.value, season: 1, episode: 1};
 			updateEntry(e.source.value, data);
 			scroller.add(createEntryView(data));
@@ -201,7 +231,7 @@ function FirstView(parent) {
 
 	var title = Ti.UI.createLabel({
 		text: 'watchnoter',
-		color: '#8000',
+		color: '#4000',
 		bottom: 10,
 		font: {
 			fontSize: '26sp'
@@ -209,7 +239,11 @@ function FirstView(parent) {
 	});
 	self.add(title);
 
-	self.add(createInputView());
+	var inputView = createInputView();
+	self.add(inputView);
+	title.addEventListener('click', function () {
+		inputView.blur();
+	});
 
 	var scroller = Ti.UI.createScrollView({
 		width: Ti.UI.FILL,
