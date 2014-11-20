@@ -2,7 +2,7 @@
 function FirstView(parent) {
 
 	var overallWidth = '90%';
-	var overallBackground = '#a11d4c';
+	var overallBackground = '#5f8fa1';
 
 	function getDict () {
 		if (Ti.App.Properties.hasProperty('watchnoter:dict')) {
@@ -52,7 +52,7 @@ function FirstView(parent) {
 				return;
 			}
 			box.count = count;
-			title.setText(data.title + ' ' + count);
+			title.setValue(data.title + ' ' + count);
 			box.fireEvent('countchanged', {count: count});
 		};
 
@@ -76,15 +76,31 @@ function FirstView(parent) {
 		});
 		box.add(up);
 
-		var title = Ti.UI.createLabel({
+		var title = Ti.UI.createTextField({
 			verticalAlign: Titanium.UI.TEXT_VERTICAL_ALIGNMENT_CENTER,
 			textAlign: Titanium.UI.TEXT_ALIGNMENT_CENTER,
-			text: '',
+			value: '',
+			backgroundColor: 'transparent',
 			color: '#fff',
 			height: '100%',
-			width: '33%'
+			width: '33%',
+			editable: false
 		});
 		box.add(title);
+		title.addEventListener('click', function (e) {
+			e.source.setValue(e.source.getValue().slice(2));
+			e.source.editable = true;
+			e.source.focus();
+		});
+		title.addEventListener('return', function (e) {
+			if (e.source.getValue() != '' && e.source.getValue() > 0) {
+				box.setCount(e.source.getValue());
+			} else {
+				box.setCount(box.getCount());
+			}
+			e.source.editable = false;
+			e.source.blur();
+		})
 
 		var down = Ti.UI.createLabel({
 			text: '-',
@@ -121,7 +137,7 @@ function FirstView(parent) {
 
 		var topBox = Ti.UI.createView({
 			backgroundColor: overallBackground,
-			height: '50%',
+			height: (Ti.Platform.osname == 'android') ? '40%' : '50%',
 			width: Ti.UI.FILL,
 			layout: 'horizontal'
 		});
@@ -157,7 +173,7 @@ function FirstView(parent) {
 		});
 
 		var bottomBox = Ti.UI.createView({
-			height: '50%',
+			height: (Ti.Platform.osname == 'android') ? '60%' : '50%',
 			width: Ti.UI.FILL,
 			layout: 'horizontal'
 		});
