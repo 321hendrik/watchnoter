@@ -76,7 +76,18 @@ function FirstView(parent) {
 		});
 		box.add(up);
 
+		// done button for iOS
+		var button = Ti.UI.createButton({
+			backgroundColor: '#6fff',
+			color: overallBackground,
+			title: 'done'
+		});
+		button.addEventListener('click', function () {
+			title.fireEvent('return', {source: title});
+		});
+
 		var title = Ti.UI.createTextField({
+			keyboardToolbar: button,
 			verticalAlign: Titanium.UI.TEXT_VERTICAL_ALIGNMENT_CENTER,
 			textAlign: Titanium.UI.TEXT_ALIGNMENT_CENTER,
 			value: '',
@@ -84,23 +95,25 @@ function FirstView(parent) {
 			color: '#fff',
 			height: '100%',
 			width: '33%',
-			editable: false
+			keyboardType: Titanium.UI.KEYBOARD_NUMBER_PAD
 		});
 		box.add(title);
-		title.addEventListener('click', function (e) {
-			e.source.setValue(e.source.getValue().slice(2));
-			e.source.editable = true;
-			e.source.focus();
+		title.addEventListener('focus', function (e) {
+			e.source.setValue('');
 		});
 		title.addEventListener('return', function (e) {
-			if (e.source.getValue() != '' && e.source.getValue() > 0) {
-				box.setCount(e.source.getValue());
+			if (e.source.getValue() !== '' && e.source.getValue() > 0) {
+				try {
+					var intValue = parseInt(e.source.getValue(), 10);
+					box.setCount(intValue);
+				} catch (err) {
+					box.setCount(box.getCount());
+				}
 			} else {
 				box.setCount(box.getCount());
 			}
-			e.source.editable = false;
 			e.source.blur();
-		})
+		});
 
 		var down = Ti.UI.createLabel({
 			text: '-',
@@ -129,7 +142,7 @@ function FirstView(parent) {
 			season: data.season,
 			episode: data.episode,
 			width: overallWidth,
-			height: 60,
+			height: (Ti.Platform.osname == 'android') ? 70 : 60,
 			layout: 'vertical',
 			backgroundColor: '#6fff',
 			bottom: 10
@@ -137,7 +150,7 @@ function FirstView(parent) {
 
 		var topBox = Ti.UI.createView({
 			backgroundColor: overallBackground,
-			height: (Ti.Platform.osname == 'android') ? '40%' : '50%',
+			height: (Ti.Platform.osname == 'android') ? '45%' : '50%',
 			width: Ti.UI.FILL,
 			layout: 'horizontal'
 		});
@@ -173,7 +186,7 @@ function FirstView(parent) {
 		});
 
 		var bottomBox = Ti.UI.createView({
-			height: (Ti.Platform.osname == 'android') ? '60%' : '50%',
+			height: (Ti.Platform.osname == 'android') ? '55%' : '50%',
 			width: Ti.UI.FILL,
 			layout: 'horizontal'
 		});
@@ -202,7 +215,7 @@ function FirstView(parent) {
 	function createInputView (argument) {
 		var view = Ti.UI.createTextField({
 			width: overallWidth,
-			height: (Ti.Platform.osname == 'android') ? 35 : 30,
+			height: (Ti.Platform.osname == 'android') ? 40 : 30,
 			textAlign: Titanium.UI.TEXT_ALIGNMENT_CENTER,
 			backgroundColor: '#6fff',
 			hintText: 'Add new series',
@@ -225,7 +238,8 @@ function FirstView(parent) {
 			var data = {title: e.source.value, season: 1, episode: 1};
 			updateEntry(e.source.value, data);
 			scroller.add(createEntryView(data));
-			e.source.value = '';
+			e.source.setValue('');
+			e.source.blur();
 		});
 		return view;
 	}
